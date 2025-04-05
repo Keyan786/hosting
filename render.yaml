@@ -1,0 +1,35 @@
+services:
+  # PostgreSQL Database
+  - type: pserv
+    name: interview-prep-db
+    env: postgresql # Or other supported database options
+    plan: free # Or your desired plan
+    # Optional: Add postgresqlVersion: 14 if needed
+
+  # Flask Web Service
+  - type: web
+    name: interview-prep-app
+    env: python
+    plan: free # Or your desired plan
+    buildCommand: |
+      cd mockinterview # Navigate to the directory containing requirements.txt
+      pip install --upgrade pip
+      pip install -r requirements.txt
+      cd web-inter-prep-main # Navigate to the directory containing app.py
+      # Create database tables on build
+      flask shell -c "from app import db; db.create_all()" # Create tables
+      # flask db upgrade # Removed migration step
+    startCommand: "gunicorn --chdir mockinterview/web-inter-prep-main app:app"
+    envVars:
+      - key: DATABASE_URL
+        fromService:
+          type: pserv
+          name: interview-prep-db
+          property: connectionString
+      - key: PYTHON_VERSION
+        value: 3.11 # Match the version used locally
+      - key: SECRET_KEY
+        generateValue: true # Let Render generate a secure secret key
+      - key: GEMINI_API_KEY
+        sync: false # Set this manually in the Render dashboard
+      # Add other environment variables if needed 
